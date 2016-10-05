@@ -8,11 +8,16 @@ class Mention < ActiveRecord::Base
     @client = twitter.client
     mentions = @client.mentions_timeline
     mentions.each do |tweet|
-
       #need to check that we are not adding repeated mentions but a more elegant approach...
       #FIXME: a more sophisticated approach for this
       hash_tag = tweet.text.scan(/#\S+/)[0]
-      handler = tweet.text.scan(/@\S+/)[1]
+
+      # Get a list of all the handles in a post
+      handles = tweet.text.scan(/@\S+/)
+      #Remove @tweechable_moments because we don't need to be sending any tweets to ourselves
+      handles.delete("@tweechable")
+      # handles[0] is the person who wrote the tweet, so handles[1] will be the target
+      handler = handles[1]
       m = Mention.find_by(handler: handler, hash_tag: hash_tag)
 
       if m
@@ -41,26 +46,28 @@ class Mention < ActiveRecord::Base
   end
 
   def self.reply_mentions
-    mention = Mention.where(replied:false).where.not(lesson_id:nil).first
-    @lesson = Lesson.find_by(id: mention.lesson_id)
+    mentions = Mention.where(replied: false).where.not(lesson_id:nil)
+    mentions.each do |mention|
+      @lesson = Lesson.find_by(id: mention.lesson_id)
 
-    if @lesson
-      twitters = Twitter_API.new
-      @client = twitters.client
+      if @lesson
+        twitters = Twitter_API.new
+        @client = twitters.client
 
-      # only sending out one tweet for now for demo
-      # add the blank two make sure we can tag! otherwise it'd be one string
-      to_send = @lesson.tweets[0].text + ' ' + mention.handler
-      @t = @client.update(to_send)
-      if @t
-        mention.replied = true
-        mention.save
-      else
-        #FIXME: do something here if we didn't reply the user but leave it for now meh.
+        @lesson.tweets.each do |message|
+          # add the blank too make sure we can tag! otherwise it'd be one string
+          to_send = message.text + ' ' + mention.handler
+          puts "Tweeting: #{to_send}"
+          @t = @client.update(to_send)
+          if !@t
+            #If something goes wrong during this process, it should probably do something about it
+            puts "Something went wrong with posting this tweet: #{to_send}"
+          end
+        end
+        #Right now this is assuming the reply went successfully
+        mention.update(replied: true);
       end
-
     end
-
   end
 
 end

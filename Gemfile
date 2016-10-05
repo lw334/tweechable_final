@@ -36,7 +36,6 @@ gem 'jquery-ui-rails'
 gem 'pg'
 # Use ActiveModel has_secure_password
 gem 'bcrypt'
-# devise potentially..
 gem 'devise'
 # rails admin
 gem 'rails_admin'
@@ -44,6 +43,8 @@ gem 'rails_admin'
 gem 'email_validator'
 # whenever for cron job
 gem 'whenever', :require => false
+
+gem 'bootstrap-will_paginate'
 
 
 # Use Unicorn as the app server
